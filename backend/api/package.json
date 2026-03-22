@@ -1,0 +1,29 @@
+{
+  "name": "backend-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "openapi": "node dist/generate-openapi.js",
+    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json && node dist/generate-openapi.js",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.2",
+    "@fastify/jwt": "^9.0.3",
+    "@fastify/swagger": "^9.4.2",
+    "@fastify/swagger-ui": "^5.2.2",
+    "@scee/db": "*",
+    "@scee/shared": "*",
+    "bcrypt": "^5.1.1",
+    "bullmq": "^5.41.7",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

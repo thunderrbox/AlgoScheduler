@@ -1,0 +1,26 @@
+{
+  "name": "smart-code-evaluation-engine",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run db:generate -w @scee/db && npm run build -w @scee/shared && npm run build -w @scee/db",
+    "dev": "concurrently -n api,worker,web -c blue,magenta,green \"npm run dev -w backend-api\" \"npm run dev -w backend-worker\" \"npm run dev -w frontend\"",
+    "db:generate": "npm run db:generate -w @scee/db",
+    "db:migrate": "npm run db:migrate -w @scee/db",
+    "db:push": "npm run db:push -w @scee/db",
+    "db:seed": "npm run db:seed -w @scee/db",
+    "openapi": "npm run openapi -w backend-api",
+    "build": "npm run build -w @scee/shared && npm run build -w @scee/db && npm run build -w backend-api && npm run build -w backend-worker && npm run build -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "~5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  admin
+}
+
+enum Difficulty {
+  easy
+  medium
+  hard
+}
+
+enum SubmissionStatus {
+  queued
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum SubmissionKind {
+  run
+  submit
+}
+
+enum Verdict {
+  AC
+  WA
+  TLE
+  MLE
+  RE
+  CE
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(student)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  refreshTokens RefreshToken[]
+  problems      Problem[]          @relation("ProblemAuthor")
+  submissions   Submission[]
+  leaderboard   LeaderboardEntry[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Problem {
+  id            String     @id @default(uuid())
+  slug          String     @unique
+  title         String
+  descriptionMd String     @map("description_md")
+  difficulty    Difficulty
+  timeLimitMs   Int        @map("time_limit_ms")
+  memoryLimitMb Int        @map("memory_limit_mb")
+  authorId      String     @map("author_id")
+  isPublished   Boolean    @default(false) @map("is_published")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  author      User              @relation("ProblemAuthor", fields: [authorId], references: [id])
+  languages   ProblemLanguage[]
+  testCases   TestCase[]
+  submissions Submission[]
+  leaderboard LeaderboardEntry[]
+}
+
+model ProblemLanguage {
+  problemId   String @map("problem_id")
+  language    String
+  starterCode String @map("starter_code")
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, language])
+}
+
+model TestCase {
+  id             String @id @default(uuid())
+  problemId      String @map("problem_id")
+  isHidden       Boolean @default(true) @map("is_hidden")
+  input          String
+  expectedOutput String @map("expected_output")
+  weight         Int    @default(1)
+  orderIndex     Int    @map("order_index")
+
+  problem           Problem                @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  submissionResults SubmissionTestResult[]
+
+  @@index([problemId, orderIndex])
+}
+
+model Submission {
+  id           String           @id @default(uuid())
+  userId       String           @map("user_id")
+  problemId    String           @map("problem_id")
+  language     String
+  sourceCode   String           @map("source_code")
+  status       SubmissionStatus @default(queued)
+  kind         SubmissionKind
+  verdict      Verdict?
+  totalTimeMs  Int?             @map("total_time_ms")
+  maxMemoryKb  Int?             @map("max_memory_kb")
+  judgeMessage String?          @map("judge_message")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  startedAt    DateTime?        @map("started_at")
+  finishedAt   DateTime?        @map("finished_at")
+
+  user        User                   @relation(fields: [userId], references: [id])
+  problem     Problem                @relation(fields: [problemId], references: [id])
+  testResults SubmissionTestResult[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([problemId, status, createdAt])
+}
+
+model SubmissionTestResult {
+  id            String  @id @default(uuid())
+  submissionId  String  @map("submission_id")
+  testCaseId    String  @map("test_case_id")
+  passed        Boolean
+  timeMs        Int     @map("time_ms")
+  memoryKb      Int     @map("memory_kb")
+  stdoutPreview String? @map("stdout_preview")
+  stderrPreview String? @map("stderr_preview")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCase   TestCase   @relation(fields: [testCaseId], references: [id])
+
+  @@unique([submissionId, testCaseId])
+}
+
+model LeaderboardEntry {
+  problemId        String   @map("problem_id")
+  userId           String   @map("user_id")
+  bestTimeMs       Int      @map("best_time_ms")
+  bestSubmissionId String   @map("best_submission_id")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, userId])
+}
