@@ -1,4 +1,16 @@
-/** BACKEND — register / login / refresh / logout (JWT + refresh tokens in DB). */
+/** 
+ * AUTHENTICATION ROUTES
+ * ---------------------
+ * This module handles user identity using a secure "Refresh Token Rotation" strategy:
+ * 1. /register - Creates a user, hashes password with bcrypt, and issues initial tokens.
+ * 2. /login - Validates credentials and issues a fresh token pair.
+ * 3. /refresh - Exchanges a valid Refresh Token for a NEW Access + Refresh pair (rotating).
+ * 4. /logout - Revokes the refresh token to end the session server-side.
+ * 
+ * Flow: 
+ * - Access Token: 15 mins. Used for the 'Authorization' header.
+ * - Refresh Token: 7 days. Stored in DB and checked against a secure hash.
+ */
 import type { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
 import { prisma, Role } from "@scee/db";
@@ -12,6 +24,7 @@ const ACCESS_TTL_SEC = 15 * 60;
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
+
   app.post(
     "/auth/register",
     {

@@ -1,15 +1,21 @@
 /**
- * BACKEND — judge worker (not HTTP)
- * ----------------------------------
- * Run: npm run dev -w backend-worker (or `npm run dev` from repo root).
- * Pulls jobs from Redis (BullMQ). When the API enqueues a submission, this process runs stub-judge
- * and updates Postgres. Without this running, submissions stay "queued".
+ * BACKEND — judge worker (BullMQ Consumer)
+ * ----------------------------------------
+ * This service is responsible for the actual evaluation of user code.
+ * It is NOT an HTTP server; instead, it subscribes to the "judge" queue in Redis.
+ * 
+ * Responsibilities:
+ * 1. Pick up a job containing a 'submissionId'.
+ * 2. Execute the judge logic (currently a stub, ready for sandbox integration).
+ * 3. Update the Submission status and verdict in Postgres.
+ * 4. Record individual test results for the user to view.
  */
 import { Worker } from "bullmq";
 import { JUDGE_QUEUE_NAME } from "@scee/shared";
 import { prisma, SubmissionStatus } from "@scee/db";
 import { env } from "./env.js";
 import { runStubJudge } from "./judge/stub-judge.js";
+
 
 const connection = {
   url: env.REDIS_URL,

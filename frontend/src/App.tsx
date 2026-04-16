@@ -73,7 +73,9 @@ export function App() {
 
   const authed = Boolean(token);
 
-  // --- Auth: tokens come from the API; stored in localStorage for this demo SPA ---
+  // --- Auth Management ---
+  // We use JWT (JSON Web Tokens) stored in localStorage.
+  // accessToken is short-lived (15m), refreshToken is long-lived (7d).
   const persistAuth = useCallback((access: string, refresh: string) => {
     localStorage.setItem("accessToken", access);
     localStorage.setItem("refreshToken", refresh);
@@ -81,6 +83,9 @@ export function App() {
     setRefreshToken(refresh);
   }, []);
 
+  /**
+   * Login: Sends credentials to Backend, receives tokens.
+   */
   const login = useCallback(async () => {
     setError(null);
     setBusy(true);
@@ -97,6 +102,9 @@ export function App() {
     }
   }, [email, password, persistAuth]);
 
+  /**
+   * Register: Creates new student account.
+   */
   const register = useCallback(async () => {
     setError(null);
     setBusy(true);
@@ -113,12 +121,28 @@ export function App() {
     }
   }, [email, password, persistAuth]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    setToken(null);
-    setRefreshToken(null);
-  }, []);
+  /**
+   * Logout: Clears local state and revokes the token on the server.
+   */
+  const logout = useCallback(async () => {
+    try {
+      if (refreshToken) {
+        // Inform server to blacklist/revoke the refresh token
+        await api("/auth/logout", {
+          method: "POST",
+          json: { refreshToken },
+        });
+      }
+    } catch (err) {
+      console.warn("Server logout failed, clearing local state anyway.", err);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      setToken(null);
+      setRefreshToken(null);
+    }
+  }, [refreshToken]);
+
 
   // --- Problems: public catalog from GET /api/problems ---
   const loadProblems = useCallback(async () => {
@@ -260,14 +284,11 @@ export function App() {
             <button type="button" disabled={busy} onClick={() => void register()}>
               Register
             </button>
-            <button type="button" onClick={logout} disabled={!authed}>
+            <button type="button" onClick={() => void logout()} disabled={!authed}>
               Logout
             </button>
           </div>
-          <p style={{ fontSize: "0.9rem", color: "#64748b" }}>
-            Seed users: <code>admin@local.dev</code>, <code>demo@local.dev</code> /{" "}
-            <code>password123</code>
-          </p>
+
 
           <h2>Problems</h2>
           <ul style={{ paddingLeft: "1.1rem" }}>

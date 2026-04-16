@@ -1,0 +1,51 @@
+# --- STAGE 1: Builder ---
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies for building (including native modules if any)
+RUN apk add --no-cache python3 make g++
+
+# Copy workspace configuration
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+COPY backend/api/package*.json ./backend/api/
+COPY backend/worker/package*.json ./backend/worker/
+COPY packages/db/package*.json ./packages/db/
+COPY packages/shared/package*.json ./packages/shared/
+
+# Install all dependencies (monorepo)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the project
+# Note: We build shared packages first, then the API
+RUN npm run build -w @scee/shared
+RUN npm run build -w @scee/db
+RUN npm run build -w backend-api
+
+# --- STAGE 2: Runner ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy only what's needed to run
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/backend/api/package*.json ./backend/api/
+COPY --from=builder /app/backend/api/dist ./backend/api/dist
+COPY --from=builder /app/packages/db/package*.json ./packages/db/
+COPY --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
+COPY --from=builder /app/packages/shared/package*.json ./packages/shared/
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+
+EXPOSE 3001
+
+# Entrypoint script to run migrations then start
+# We use a shell form here to allow variable expansion if needed, or just run node
+CMD npx prisma migrate deploy --schema ./packages/db/prisma/schema.prisma && npm start -w backend-api

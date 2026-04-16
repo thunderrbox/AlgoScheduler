@@ -1,4 +1,9 @@
-/** BACKEND — liveness probe for load balancers / sanity checks. */
+/**
+ * HEALTH CHECK
+ * ------------
+ * A simple endpoint used by load balancers and deployment platforms (like Railway)
+ * to verify that the API server is up and responsive.
+ */
 import type { FastifyInstance } from "fastify";
 
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
@@ -6,19 +11,20 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
     "/health",
     {
       schema: {
-        tags: ["health"],
-        summary: "Health check",
+        tags: ["system"],
+        summary: "Check API health",
         response: {
           200: {
             type: "object",
             properties: {
               ok: { type: "boolean" },
-              service: { type: "string" },
+              status: { type: "string" },
             },
           },
         },
       },
     },
-    async () => ({ ok: true, service: "scee-api" }),
+    async () => ({ ok: true, status: "healthy" }),
   );
 }
+

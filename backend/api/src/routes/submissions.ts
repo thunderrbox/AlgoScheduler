@@ -1,7 +1,14 @@
 /**
- * BACKEND — submissions API
- * -------------------------
- * POST creates a DB row and enqueues a judge job. GET returns status + per-test summary after worker runs.
+ * SUBMISSION ROUTES
+ * -----------------
+ * Handles the logic for students submitting code for evaluation.
+ * 
+ * Flow:
+ * 1. User POSTs source code + problem ID to `/submissions`.
+ * 2. API validates the request and creates a "queued" row in Postgres.
+ * 3. API enqueues a job in BullMQ (Redis) with the submission ID.
+ * 4. The `backend-worker` picks up the job, marks it "running", and judges it.
+ * 5. The frontend polls GET `/submissions/:id` to show results once "completed".
  */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
@@ -12,6 +19,7 @@ import {
 } from "@scee/db";
 import { createSubmissionBodySchema } from "@scee/shared";
 import { enqueueJudgeJob } from "../queue/judge-queue.js";
+
 
 async function authenticate(
   req: FastifyRequest,

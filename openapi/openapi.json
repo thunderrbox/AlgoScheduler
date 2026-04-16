@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Smart Code Evaluation & Feedback Engine API",
-    "description": "MVP API: auth, problems, submissions. Judge runs asynchronously via BullMQ workers.",
-    "version": "0.0.1"
+    "title": "Smart Code Evaluation Engine (SCEE) API",
+    "description": "High-performance REST API for managing users, code challenges, and judging submissions.",
+    "version": "1.0.0"
   },
   "components": {
     "securitySchemes": {
@@ -18,9 +18,9 @@
   "paths": {
     "/api/health": {
       "get": {
-        "summary": "Health check",
+        "summary": "Check API health",
         "tags": [
-          "health"
+          "system"
         ],
         "responses": {
           "200": {
@@ -33,7 +33,7 @@
                     "ok": {
                       "type": "boolean"
                     },
-                    "service": {
+                    "status": {
                       "type": "string"
                     }
                   }
@@ -216,7 +216,7 @@
     },
     "/api/problems/{slug}": {
       "get": {
-        "summary": "Get problem by slug (starter code per language, no hidden tests)",
+        "summary": "Get problem details by unique slug",
         "tags": [
           "problems"
         ],
@@ -239,7 +239,7 @@
     },
     "/api/problems/{slug}/leaderboard": {
       "get": {
-        "summary": "Leaderboard for a problem (best time per user)",
+        "summary": "View fastest solutions for a challenge",
         "tags": [
           "problems"
         ],
@@ -362,25 +362,25 @@
   "servers": [
     {
       "url": "http://localhost:3001",
-      "description": "Local (paths include /api prefix)"
+      "description": "Local Development Server"
     }
   ],
   "tags": [
     {
-      "name": "health",
-      "description": "Liveness"
-    },
-    {
       "name": "auth",
-      "description": "JWT access + refresh"
+      "description": "Identity and session management (JWT)"
     },
     {
       "name": "problems",
-      "description": "Problem catalog"
+      "description": "Public coding challenge catalog"
     },
     {
       "name": "submissions",
-      "description": "Submit code & poll results"
+      "description": "Async judge queue and results"
+    },
+    {
+      "name": "system",
+      "description": "Health checks and metadata"
     }
   ]
 }

@@ -1,16 +1,27 @@
 /**
- * FRONTEND ENTRY (browser)
- * ------------------------
- * Vite loads this file first. It mounts the React app into <div id="root"> in index.html.
- * Folder: `frontend/` at repo root. Dev: http://localhost:5173 — `/api` → proxied to backend :3001 (vite.config.ts).
+ * FRONTEND ENTRY POINT (Browser)
+ * ------------------------------
+ * This is the entry file for the React application. 
+ * 
+ * Key Roles:
+ * 1. Mounts the React "App" component into the DOM (#root).
+ * 2. Initializes Global Styles (index.css).
+ * 3. Enables 'StrictMode' to catch potential problems during development.
  */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { App } from "./App";
 
-createRoot(document.getElementById("root")!).render(
+const container = document.getElementById("root");
+
+if (!container) {
+  throw new Error("Critical: Root container not found. Check index.html.");
+}
+
+createRoot(container).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+

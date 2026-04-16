@@ -7,39 +7,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// User roles: student (limited) or admin (full control over problems).
 enum Role {
   student
   admin
 }
 
+/// Difficulty levels for problems.
 enum Difficulty {
   easy
   medium
   hard
 }
 
+/// Lifecycle states of a code submission.
 enum SubmissionStatus {
-  queued
-  running
-  completed
-  failed
-  cancelled
+  queued     // Waiting for an available worker
+  running    // Currently being evaluated by a worker
+  completed  // Finished correctly (might still have a 'Verdict' like WA)
+  failed     // System-level failure during execution
+  cancelled  // User aborted the submission
 }
 
+/// Whether the submission is a "Run" (public tests only) or "Submit" (final evaluation).
 enum SubmissionKind {
   run
   submit
 }
 
+/// Final verdict for a code submission.
 enum Verdict {
-  AC
-  WA
-  TLE
-  MLE
-  RE
-  CE
+  AC  // Accepted (Passed all tests)
+  WA  // Wrong Answer
+  TLE // Time Limit Exceeded
+  MLE // Memory Limit Exceeded
+  RE  // Runtime Error
+  CE  // Compilation Error
 }
 
+/// Represents a platform user.
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -53,10 +59,11 @@ model User {
   leaderboard   LeaderboardEntry[]
 }
 
+/// Stores secure hashes of active refresh tokens to manage long-lived sessions.
 model RefreshToken {
   id        String    @id @default(uuid())
   userId    String    @map("user_id")
-  tokenHash String    @unique @map("token_hash")
+  tokenHash String    @unique @map("token_hash") // SHA-256 hash of the token
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -66,11 +73,12 @@ model RefreshToken {
   @@index([userId])
 }
 
+/// A coding challenge with a description, limits, and test cases.
 model Problem {
   id            String     @id @default(uuid())
-  slug          String     @unique
+  slug          String     @unique // URL-friendly unique identifier (e.g. 'two-sum')
   title         String
-  descriptionMd String     @map("description_md")
+  descriptionMd String     @map("description_md") // Problem statement in Markdown
   difficulty    Difficulty
   timeLimitMs   Int        @map("time_limit_ms")
   memoryLimitMb Int        @map("memory_limit_mb")
@@ -86,20 +94,22 @@ model Problem {
   leaderboard LeaderboardEntry[]
 }
 
+/// Multi-language support configuration for each problem.
 model ProblemLanguage {
   problemId   String @map("problem_id")
-  language    String
-  starterCode String @map("starter_code")
+  language    String // e.g., 'python', 'javascript'
+  starterCode String @map("starter_code") // Boilerplate code provided to the user
 
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
   @@id([problemId, language])
 }
 
+/// A specific input/output pair used to validate code correctness.
 model TestCase {
   id             String @id @default(uuid())
   problemId      String @map("problem_id")
-  isHidden       Boolean @default(true) @map("is_hidden")
+  isHidden       Boolean @default(true) @map("is_hidden") // Hidden tests are used only during "Submit"
   input          String
   expectedOutput String @map("expected_output")
   weight         Int    @default(1)
@@ -111,6 +121,7 @@ model TestCase {
   @@index([problemId, orderIndex])
 }
 
+/// A code snippet sent by a user for evaluation.
 model Submission {
   id           String           @id @default(uuid())
   userId       String           @map("user_id")
@@ -122,7 +133,7 @@ model Submission {
   verdict      Verdict?
   totalTimeMs  Int?             @map("total_time_ms")
   maxMemoryKb  Int?             @map("max_memory_kb")
-  judgeMessage String?          @map("judge_message")
+  judgeMessage String?          @map("judge_message") // Error logs or system messages
   createdAt    DateTime         @default(now()) @map("created_at")
   startedAt    DateTime?        @map("started_at")
   finishedAt   DateTime?        @map("finished_at")
@@ -135,6 +146,7 @@ model Submission {
   @@index([problemId, status, createdAt])
 }
 
+/// Detailed result of a submission running against a specific test case.
 model SubmissionTestResult {
   id            String  @id @default(uuid())
   submissionId  String  @map("submission_id")
@@ -142,7 +154,7 @@ model SubmissionTestResult {
   passed        Boolean
   timeMs        Int     @map("time_ms")
   memoryKb      Int     @map("memory_kb")
-  stdoutPreview String? @map("stdout_preview")
+  stdoutPreview String? @map("stdout_preview") // Snippet of the actual program output
   stderrPreview String? @map("stderr_preview")
 
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
@@ -151,6 +163,7 @@ model SubmissionTestResult {
   @@unique([submissionId, testCaseId])
 }
 
+/// Stores the personal best historical performance for each user on each problem.
 model LeaderboardEntry {
   problemId        String   @map("problem_id")
   userId           String   @map("user_id")
@@ -163,3 +176,4 @@ model LeaderboardEntry {
 
   @@id([problemId, userId])
 }
+

@@ -1,3 +1,15 @@
+/**
+ * DATABASE SEEDING
+ * ----------------
+ * This script populates the database with initial data required for testing or production bootstrap.
+ * Run it using: `npm run db:seed`
+ * 
+ * Seeding Steps:
+ * 1. Create default administrative and demo student accounts.
+ * 2. Upload "Two Sum" as a sample problem with Python/JS starter code.
+ * 3. Attach public and hidden test cases to the problem.
+ * 4. Create a dummy completed submission to verify the leaderboard UI.
+ */
 import {
   Difficulty,
   PrismaClient,
@@ -7,6 +19,7 @@ import {
   Verdict,
 } from "@prisma/client";
 import bcrypt from "bcrypt";
+
 
 const prisma = new PrismaClient();
 
