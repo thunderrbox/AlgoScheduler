@@ -1,21 +1,21 @@
 /**
- * FRONTEND — AlgoScheduler Premium UI
- * --------------------------------------
- * Full dark glassmorphism redesign with:
- * - Animated hero section with floating particles and orb effects
- * - Glassmorphic auth panel with smooth transitions
- * - Premium problem list with difficulty badges
- * - Monaco editor in dark theme with language switcher
- * - Rich submission result display with per-test breakdown
+ * FRONTEND — AlgoScheduler Premium UI v2
+ * ─────────────────────────────────────────
+ * Deep hero-section redesign inspired by top Dribbble/Unsection patterns:
+ * - Aurora mesh gradient hero with particle canvas + floating code card
+ * - Split-layout landing (text left, visual right)
+ * - "How it works" section with numbered steps
+ * - Horizontal feature strip with animated icons
+ * - Premium IDE dashboard with glass sidebar + Monaco dark theme
+ * - Animated verdict display with per-test grid
  *
- * All logic (API calls, auth, polling) is unchanged from the original.
- * Only the rendering layer has been upgraded.
+ * Developer: Abhijeet Singh Rana
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { api } from "./api";
 
-/* ─── Types ──────────────────────────────────────────────────────────── */
+/* ─── Types ─────────────────────────────────────────────────────────── */
 type ProblemListItem = {
   id: string; slug: string; title: string;
   difficulty: string; timeLimitMs: number; memoryLimitMb: number;
@@ -34,66 +34,50 @@ type SubmissionStatus = {
   perTest: { testCaseId: string; orderIndex: number; passed: boolean; timeMs: number; isHidden: boolean }[];
 };
 
-/* ─── Particle Canvas (Hero Background) ─────────────────────────────── */
+/* ─── Particle Canvas ────────────────────────────────────────────────── */
 function ParticleCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
+  const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    // Make canvas fill the hero area
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
     resize();
     window.addEventListener("resize", resize);
-
-    // Particle system
-    const particles: { x: number; y: number; vx: number; vy: number; r: number; o: number }[] = [];
-    for (let i = 0; i < 80; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        r: Math.random() * 1.5 + 0.5,
-        o: Math.random() * 0.5 + 0.1,
-      });
-    }
-
+    const pts = Array.from({ length: 70 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - .5) * .35,
+      vy: (Math.random() - .5) * .35,
+      r: Math.random() * 1.4 + .4,
+      o: Math.random() * .45 + .1,
+    }));
     let raf: number;
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Move and draw particles
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
+      for (const p of pts) {
+        p.x += p.vx; p.y += p.vy;
         if (p.x < 0) p.x = canvas.width;
         if (p.x > canvas.width) p.x = 0;
         if (p.y < 0) p.y = canvas.height;
         if (p.y > canvas.height) p.y = 0;
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99,102,241,${p.o})`;
+        ctx.fillStyle = `rgba(109,93,255,${p.o})`;
         ctx.fill();
       }
-      // Draw connections between nearby particles
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x;
+          const dy = pts[i].y - pts[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 110) {
             ctx.beginPath();
-            ctx.strokeStyle = `rgba(99,102,241,${0.08 * (1 - dist / 120)})`;
-            ctx.lineWidth = 0.5;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(109,93,255,${.07 * (1 - d / 110)})`;
+            ctx.lineWidth = .5;
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
             ctx.stroke();
           }
         }
@@ -101,192 +85,136 @@ function ParticleCanvas() {
       raf = requestAnimationFrame(draw);
     };
     draw();
-    return () => {
-      window.removeEventListener("resize", resize);
-      cancelAnimationFrame(raf);
-    };
+    return () => { window.removeEventListener("resize", resize); cancelAnimationFrame(raf); };
   }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
-    />
-  );
+  return <canvas ref={ref} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />;
 }
 
-/* ─── Typewriter Effect ──────────────────────────────────────────────── */
+/* ─── Typewriter ─────────────────────────────────────────────────────── */
 function Typewriter({ words }: { words: string[] }) {
   const [display, setDisplay] = useState("");
-  const [wordIdx, setWordIdx] = useState(0);
-  const [charIdx, setCharIdx] = useState(0);
-  const [deleting, setDeleting] = useState(false);
-
+  const [wi, setWi] = useState(0);
+  const [ci, setCi] = useState(0);
+  const [del, setDel] = useState(false);
   useEffect(() => {
-    const word = words[wordIdx % words.length];
-    const delay = deleting ? 40 : charIdx === word.length ? 1800 : 80;
+    const word = words[wi % words.length];
+    const delay = del ? 38 : ci === word.length ? 1800 : 75;
     const t = setTimeout(() => {
-      if (!deleting && charIdx < word.length) {
-        setDisplay(word.slice(0, charIdx + 1));
-        setCharIdx(c => c + 1);
-      } else if (!deleting && charIdx === word.length) {
-        setDeleting(true);
-      } else if (deleting && charIdx > 0) {
-        setDisplay(word.slice(0, charIdx - 1));
-        setCharIdx(c => c - 1);
-      } else {
-        setDeleting(false);
-        setWordIdx(w => w + 1);
-      }
+      if (!del && ci < word.length) { setDisplay(word.slice(0, ci + 1)); setCi(c => c + 1); }
+      else if (!del && ci === word.length) { setDel(true); }
+      else if (del && ci > 0) { setDisplay(word.slice(0, ci - 1)); setCi(c => c - 1); }
+      else { setDel(false); setWi(w => w + 1); }
     }, delay);
     return () => clearTimeout(t);
-  }, [charIdx, deleting, wordIdx, words]);
-
+  }, [ci, del, wi, words]);
   return (
-    <span style={{ color: "var(--accent-3)" }}>
-      {display}
-      <span style={{ animation: "blink 1s step-end infinite", marginLeft: 2 }}>|</span>
+    <span style={{ color: "var(--cyan)" }}>
+      {display}<span style={{ animation: "blink 1s step-end infinite" }}>|</span>
     </span>
   );
 }
 
-/* ─── Stat Card ──────────────────────────────────────────────────────── */
-function StatCard({ icon, value, label }: { icon: string; value: string; label: string }) {
+/* ─── Floating Code Card ─────────────────────────────────────────────── */
+function FloatingCodeCard() {
+  const lines = [
+    { token: "def", rest: " solve(nums: list[int]) -> int:", color: "#c792ea" },
+    { token: "    n", rest: " = len(nums)", color: "#82aaff" },
+    { token: "    dp", rest: " = [0] * (n + 1)", color: "#82aaff" },
+    { token: "    for", rest: " i in range(n):", color: "#c792ea" },
+    { token: "        dp", rest: "[i+1] = dp[i] + nums[i]", color: "#82aaff" },
+    { token: "    return", rest: " max(dp)", color: "#c792ea" },
+  ];
   return (
-    <div className="glass animate-fade-up" style={{ padding: "20px 24px", textAlign: "center", minWidth: 120 }}>
-      <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>{icon}</div>
-      <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)" }}>{value}</div>
-      <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>{label}</div>
+    <div className="anim-float-slow" style={{
+      background: "rgba(10,7,25,0.85)",
+      border: "1px solid rgba(109,93,255,0.3)",
+      borderRadius: 16,
+      padding: "20px 24px",
+      fontFamily: "var(--font-mono)",
+      fontSize: ".8rem",
+      lineHeight: 1.9,
+      backdropFilter: "blur(20px)",
+      boxShadow: "0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(109,93,255,0.15)",
+      minWidth: 340,
+    }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {["#ff5f57","#ffbd2e","#28ca41"].map(c => (
+          <div key={c} style={{ width: 12, height: 12, borderRadius: "50%", background: c }} />
+        ))}
+        <span style={{ marginLeft: 8, color: "var(--text-3)", fontSize: ".72rem" }}>solution.py</span>
+      </div>
+      {lines.map((l, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
+          <span style={{ color: l.color, minWidth: 0 }}>{l.token}</span>
+          <span style={{ color: "#a9b7c6" }}>{l.rest}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-/* ─── Difficulty Badge ──────────────────────────────────────────────── */
-function DiffBadge({ difficulty }: { difficulty: string }) {
-  const cls = difficulty === "easy" ? "badge-easy" : difficulty === "medium" ? "badge-medium" : "badge-hard";
-  return <span className={`badge ${cls}`}>{difficulty}</span>;
-}
-
-/* ─── Problem Row ────────────────────────────────────────────────────── */
-function ProblemRow({
-  problem, index, selected, onClick,
-}: { problem: ProblemListItem; index: number; selected: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="animate-fade-up"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        width: "100%",
-        padding: "12px 16px",
-        background: selected ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.03)",
-        border: `1px solid ${selected ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-        borderRadius: "var(--radius-md)",
-        color: "var(--text-primary)",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "all 0.2s",
-        animationDelay: `${index * 0.05}s`,
-      }}
-      onMouseEnter={e => {
-        if (!selected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
-      }}
-      onMouseLeave={e => {
-        if (!selected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)";
-      }}
-    >
-      {/* Number */}
-      <span style={{
-        width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-        background: selected ? "var(--accent)" : "rgba(255,255,255,0.06)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "0.72rem", fontWeight: 700, color: selected ? "white" : "var(--text-muted)",
-        transition: "all 0.2s",
-      }}>
-        {index + 1}
-      </span>
-      {/* Title */}
-      <span style={{ flex: 1, fontWeight: 500, fontSize: "0.875rem" }}>{problem.title}</span>
-      {/* Badge */}
-      <DiffBadge difficulty={problem.difficulty} />
-    </button>
-  );
-}
-
-/* ─── Verdict Display ────────────────────────────────────────────────── */
-function VerdictDisplay({ submission }: { submission: SubmissionStatus }) {
+/* ─── Verdict Display Card ────────────────────────────────────────────── */
+function VerdictCard({ submission }: { submission: SubmissionStatus }) {
   const isAC = submission.verdict === "AC";
   const passed = submission.perTest.filter(t => t.passed).length;
   const total = submission.perTest.length;
-
   return (
-    <div className="glass animate-fade-up" style={{ padding: "20px 24px", marginTop: 16 }}>
-      {/* Verdict header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+    <div className="glass anim-up" style={{ padding: "20px 24px", marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: "50%",
-          background: isAC ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "1.2rem",
-        }}>
-          {isAC ? "✅" : "❌"}
-        </div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: "1rem", color: isAC ? "var(--green)" : "var(--red)" }}>
+          width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+          background: isAC ? "rgba(0,229,160,.12)" : "rgba(255,87,87,.12)",
+          border: `1px solid ${isAC ? "rgba(0,229,160,.3)" : "rgba(255,87,87,.3)"}`,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem",
+        }}>{isAC ? "✅" : "❌"}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: isAC ? "var(--green)" : "var(--red)" }}>
             {submission.verdict ?? submission.status}
           </div>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-            {submission.judgeMessage}
+          <div style={{ fontSize: ".78rem", color: "var(--text-2)", marginTop: 2 }}>
+            {submission.judgeMessage ?? `${passed}/${total} tests passed`}
           </div>
         </div>
         {submission.totalTimeMs != null && (
-          <div style={{ marginLeft: "auto", textAlign: "right" }}>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Time</div>
-            <div style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-              {submission.totalTimeMs}ms
-            </div>
+          <div style={{
+            padding: "6px 14px", borderRadius: "var(--r-full)",
+            background: "rgba(109,93,255,.1)", border: "1px solid rgba(109,93,255,.2)",
+            fontFamily: "var(--font-mono)", fontSize: ".78rem", fontWeight: 700,
+          }}>
+            {submission.totalTimeMs}ms
           </div>
         )}
       </div>
-
-      {/* Test case grid */}
-      {submission.perTest.length > 0 && (
+      {total > 0 && (
         <>
-          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 8 }}>
-            Test Cases — {passed}/{total} passed
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".75rem", color: "var(--text-2)", marginBottom: 8 }}>
+            <span>Test Cases</span>
+            <span style={{ fontWeight: 700 }}>{passed}/{total}</span>
           </div>
-          {/* Progress bar */}
-          <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginBottom: 12 }}>
+          <div style={{ height: 5, background: "rgba(255,255,255,.06)", borderRadius: 99, marginBottom: 14, overflow: "hidden" }}>
             <div style={{
               height: "100%", borderRadius: 99,
-              background: `linear-gradient(90deg, var(--green), #34d399)`,
+              background: `linear-gradient(90deg, var(--green), #00b37a)`,
               width: `${(passed / total) * 100}%`,
-              transition: "width 0.8s ease",
+              transition: "width 1s cubic-bezier(.22,.68,0,1.2)",
             }} />
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {submission.perTest.map(t => (
-              <div
-                key={t.testCaseId}
-                title={`Test #${t.orderIndex + 1} — ${t.passed ? "Passed" : "Failed"} — ${t.timeMs}ms`}
+              <div key={t.testCaseId}
+                title={`Test #${t.orderIndex + 1} — ${t.passed ? "✓" : "✗"} — ${t.timeMs}ms`}
                 style={{
-                  width: 32, height: 32, borderRadius: "var(--radius-sm)",
-                  background: t.passed ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)",
-                  border: `1px solid ${t.passed ? "rgba(16,185,129,0.35)" : "rgba(239,68,68,0.35)"}`,
+                  width: 30, height: 30, borderRadius: "var(--r-sm)",
+                  background: t.passed ? "rgba(0,229,160,.15)" : "rgba(255,87,87,.15)",
+                  border: `1px solid ${t.passed ? "rgba(0,229,160,.3)" : "rgba(255,87,87,.3)"}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.65rem", fontWeight: 700, fontFamily: "var(--font-mono)",
+                  fontSize: ".65rem", fontFamily: "var(--font-mono)", fontWeight: 700,
                   color: t.passed ? "var(--green)" : "var(--red)",
-                  cursor: "default",
-                  transition: "transform 0.1s",
+                  cursor: "default", transition: "transform .12s",
                 }}
-                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.15)")}
+                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.2)")}
                 onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-              >
-                {t.orderIndex + 1}
-              </div>
+              >{t.orderIndex + 1}</div>
             ))}
           </div>
         </>
@@ -295,7 +223,41 @@ function VerdictDisplay({ submission }: { submission: SubmissionStatus }) {
   );
 }
 
-/* ─── Main App ───────────────────────────────────────────────────────── */
+/* ─── Diff Badge ───────────────────────────────────────────────────── */
+function DiffBadge({ d }: { d: string }) {
+  const cls = d === "easy" ? "badge-easy" : d === "medium" ? "badge-medium" : "badge-hard";
+  return <span className={`badge ${cls}`}>{d}</span>;
+}
+
+/* ─── Problem Row ──────────────────────────────────────────────────── */
+function ProblemRow({ p, i, sel, onClick }: { p: ProblemListItem; i: number; sel: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="anim-up"
+      style={{
+        display: "flex", alignItems: "center", gap: 10, width: "100%",
+        padding: "11px 14px",
+        background: sel ? "rgba(109,93,255,.12)" : "rgba(255,255,255,.025)",
+        border: `1px solid ${sel ? "rgba(109,93,255,.4)" : "rgba(255,255,255,.05)"}`,
+        borderRadius: "var(--r-md)", color: "var(--text-1)", cursor: "pointer",
+        textAlign: "left", transition: "all .2s", animationDelay: `${i * .04}s`,
+      }}
+      onMouseEnter={e => { if (!sel) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.05)"; }}
+      onMouseLeave={e => { if (!sel) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,.025)"; }}
+    >
+      <span style={{
+        width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+        background: sel ? "var(--violet)" : "rgba(255,255,255,.07)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: ".7rem", fontWeight: 800,
+        color: sel ? "#fff" : "var(--text-3)", transition: "all .2s",
+      }}>{i + 1}</span>
+      <span style={{ flex: 1, fontSize: ".85rem", fontWeight: 500 }}>{p.title}</span>
+      <DiffBadge d={p.difficulty} />
+    </button>
+  );
+}
+
+/* ─── Main App ────────────────────────────────────────────────────────── */
 export function App() {
   const [email, setEmail] = useState("demo@local.dev");
   const [password, setPassword] = useState("password123");
@@ -313,12 +275,10 @@ export function App() {
 
   const authed = Boolean(token);
 
-  /* Auth helpers */
-  const persistAuth = useCallback((access: string, refresh: string) => {
-    localStorage.setItem("accessToken", access);
-    localStorage.setItem("refreshToken", refresh);
-    setToken(access);
-    setRefreshToken(refresh);
+  const persistAuth = useCallback((a: string, r: string) => {
+    localStorage.setItem("accessToken", a);
+    localStorage.setItem("refreshToken", r);
+    setToken(a); setRefreshToken(r);
   }, []);
 
   const login = useCallback(async () => {
@@ -344,23 +304,17 @@ export function App() {
   }, [email, password, persistAuth]);
 
   const logout = useCallback(async () => {
-    try {
-      if (refreshToken) await api("/auth/logout", { method: "POST", json: { refreshToken } });
-    } catch {}
+    try { if (refreshToken) await api("/auth/logout", { method: "POST", json: { refreshToken } }); } catch {}
     finally {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("accessToken"); localStorage.removeItem("refreshToken");
       setToken(null); setRefreshToken(null);
     }
   }, [refreshToken]);
 
-  /* Problems */
   const loadProblems = useCallback(async () => {
     setError(null);
-    try {
-      const d = await api<{ items: ProblemListItem[] }>("/problems");
-      setProblems(d.items);
-    } catch (e) { setError(e instanceof Error ? e.message : "Failed to load problems"); }
+    try { setProblems((await api<{ items: ProblemListItem[] }>("/problems")).items); }
+    catch (e) { setError(e instanceof Error ? e.message : "Failed to load problems"); }
   }, []);
 
   useEffect(() => { void loadProblems(); }, [loadProblems]);
@@ -374,18 +328,15 @@ export function App() {
         if (!cancelled) {
           setDetail(d);
           const py = d.languages.find(l => l.language === "python");
-          const starter = py?.starterCode ?? d.languages[0]?.starterCode ?? "";
           setLanguage(py ? "python" : d.languages[0]?.language ?? "python");
-          setSource(starter);
-          setSubmission(null);
-          setActiveTab("problem");
+          setSource(py?.starterCode ?? d.languages[0]?.starterCode ?? "");
+          setSubmission(null); setActiveTab("problem");
         }
-      } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "Load problem failed"); }
+      } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "Load failed"); }
     })();
     return () => { cancelled = true; };
   }, [selectedSlug]);
 
-  /* Submit */
   const submit = useCallback(async (kind: "run" | "submit") => {
     if (!detail || !token) return;
     setError(null); setBusy(true); setSubmission(null); setActiveTab("submit");
@@ -406,250 +357,352 @@ export function App() {
     finally { setBusy(false); }
   }, [detail, language, source, token]);
 
-  const monacoLanguage = useMemo(() => {
+  const monacoLang = useMemo(() => {
     if (language === "python") return "python";
     if (language === "javascript") return "javascript";
     if (language === "cpp") return "cpp";
     return "plaintext";
   }, [language]);
 
-  /* ─── HERO (Landing) ──────────────────────────────────────────────── */
+  /* ── LANDING PAGE ─────────────────────────────────────────────────── */
   if (!authed) {
     return (
-      <div style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
-        {/* ── Navbar ── */}
+      <div style={{ minHeight: "100vh", position: "relative", zIndex: 1, background: "var(--bg-deep)" }}>
+
+        {/* ──────────── NAVBAR ──────────── */}
         <nav style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-          padding: "0 2rem",
-          height: 64,
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "rgba(5,8,22,0.7)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          backdropFilter: "blur(20px)",
+          padding: "0 min(5vw,64px)", height: 64,
+          background: "rgba(3,1,10,0.6)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          backdropFilter: "blur(24px)",
         }}>
+          {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
+              width: 36, height: 36, borderRadius: 10,
+              background: "linear-gradient(135deg, var(--violet), var(--purple))",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "1rem",
+              fontSize: "1.1rem", boxShadow: "0 0 20px rgba(109,93,255,.4)",
             }}>⚡</div>
-            <span style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "-0.02em" }}>
-              Algo<span className="gradient-text">Scheduler</span>
+            <span style={{ fontWeight: 900, fontSize: "1.1rem", letterSpacing: "-.03em" }}>
+              Algo<span className="grad">Scheduler</span>
             </span>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          {/* Nav links */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <a href="/api/docs" target="_blank" rel="noreferrer"
-              className="btn btn-ghost" style={{ padding: "7px 16px", fontSize: "0.8rem" }}>
+              className="btn btn-ghost" style={{ padding: "6px 18px", fontSize: ".8rem", borderRadius: "var(--r-full)" }}>
               API Docs ↗
             </a>
           </div>
         </nav>
 
-        {/* ── Hero Section ── */}
+        {/* ──────────── HERO SECTION ──────────── */}
         <section style={{
           position: "relative", minHeight: "100vh",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          textAlign: "center", padding: "120px 2rem 80px",
+          display: "flex", alignItems: "center",
+          padding: "100px min(5vw,64px) 60px",
           overflow: "hidden",
         }}>
-          {/* Particle canvas */}
-          <ParticleCanvas />
+          {/* Aurora background */}
+          <div className="aurora-bg" />
 
-          {/* Glowing orbs */}
-          <div style={{
-            position: "absolute", width: 600, height: 600, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
-            top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            pointerEvents: "none",
-          }} />
-          <div style={{
-            position: "absolute", width: 300, height: 300, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)",
-            top: "20%", right: "15%", animation: "float 6s ease-in-out infinite",
-            pointerEvents: "none",
-          }} />
-
-          {/* Badge */}
-          <div className="animate-fade-up" style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "6px 16px",
-            background: "rgba(99,102,241,0.1)",
-            border: "1px solid rgba(99,102,241,0.25)",
-            borderRadius: 99, fontSize: "0.78rem", fontWeight: 600,
-            color: "var(--accent)", marginBottom: 28,
-            backdropFilter: "blur(8px)",
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block", animation: "pulse-glow 2s ease infinite" }} />
-            Open Beta · Free to Use
+          {/* Particle layer */}
+          <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+            <ParticleCanvas />
           </div>
 
-          {/* Headline */}
-          <h1 className="animate-fade-up delay-100" style={{
-            fontSize: "clamp(2.5rem, 7vw, 5rem)",
-            fontWeight: 900, lineHeight: 1.1, marginBottom: 16,
-            maxWidth: 800,
-          }}>
-            Code. Judge.{" "}
-            <span className="gradient-text">Compete.</span>
-          </h1>
+          {/* Radial shimmer orbs */}
+          <div className="orb" style={{ width: 500, height: 500, top: "-10%", right: "15%", background: "radial-gradient(circle, rgba(109,93,255,.15) 0%, transparent 70%)", zIndex: 1 }} />
+          <div className="orb" style={{ width: 350, height: 350, bottom: "10%", left: "5%", background: "radial-gradient(circle, rgba(0,212,255,.1) 0%, transparent 70%)", zIndex: 1, animation: "float 8s ease-in-out infinite" }} />
+          <div className="orb" style={{ width: 250, height: 250, top: "30%", left: "40%", background: "radial-gradient(circle, rgba(255,110,179,.08) 0%, transparent 70%)", zIndex: 1, animation: "float 12s ease-in-out infinite reverse" }} />
 
-          {/* Typewriter subtitle */}
-          <p className="animate-fade-up delay-200" style={{
-            fontSize: "clamp(1rem, 2.5vw, 1.35rem)",
-            color: "var(--text-secondary)", marginBottom: 48,
-            maxWidth: 560,
+          {/* Content: left text + right visual */}
+          <div style={{
+            position: "relative", zIndex: 2,
+            display: "flex", alignItems: "center",
+            gap: "clamp(32px, 5vw, 80px)",
+            width: "100%", maxWidth: 1200, margin: "0 auto",
+            flexWrap: "wrap",
           }}>
-            The smart platform to{" "}
-            <Typewriter words={["solve DSA problems", "write Python & C++", "track your progress", "beat the leaderboard"]} />
-          </p>
 
-          {/* Auth Card */}
-          <div className="glass animate-fade-up delay-300" style={{
-            padding: "32px", width: "100%", maxWidth: 420,
-            animation: "pulse-glow 4s ease infinite",
-            marginBottom: 60,
-          }}>
-            <h2 style={{ fontSize: "1.1rem", marginBottom: 24, color: "var(--text-primary)" }}>
-              Get Started — It&apos;s Free
-            </h2>
-
-            {error && (
-              <div style={{
-                background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
-                padding: "10px 14px", borderRadius: "var(--radius-md)",
-                fontSize: "0.85rem", color: "#fca5a5", marginBottom: 16,
+            {/* ── LEFT: Text ── */}
+            <div style={{ flex: "1 1 380px", maxWidth: 580 }}>
+              {/* Pill badge */}
+              <div className="anim-up" style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "5px 14px", borderRadius: "var(--r-full)",
+                background: "rgba(109,93,255,.1)", border: "1px solid rgba(109,93,255,.25)",
+                fontSize: ".75rem", fontWeight: 700, color: "var(--violet)",
+                marginBottom: 24, letterSpacing: ".05em", textTransform: "uppercase",
               }}>
-                ⚠️ {error}
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--violet)", display: "inline-block", animation: "pulse-glow 2s ease infinite" }} />
+                Open Beta · 100% Free
               </div>
-            )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: "0.78rem", color: "var(--text-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-                  Email address
-                </label>
-                <input
-                  id="auth-email"
-                  className="input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && void login()}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.78rem", color: "var(--text-muted)", display: "block", marginBottom: 6, fontWeight: 500 }}>
-                  Password
-                </label>
-                <input
-                  id="auth-password"
-                  className="input"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && void login()}
-                />
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <button id="btn-login" className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={() => void login()}>
-                  {busy ? "⏳ Logging in…" : "→ Login"}
-                </button>
-                <button id="btn-register" className="btn btn-ghost" style={{ flex: 1 }} disabled={busy} onClick={() => void register()}>
-                  Register
-                </button>
-              </div>
-              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center" }}>
-                Demo: <code style={{ color: "var(--accent-3)", fontFamily: "var(--font-mono)" }}>demo@local.dev</code> / <code style={{ color: "var(--accent-3)", fontFamily: "var(--font-mono)" }}>password123</code>
+              {/* Headline */}
+              <h1 className="anim-up d1" style={{
+                fontSize: "clamp(2.8rem, 6.5vw, 5.2rem)",
+                fontWeight: 900, lineHeight: 1.05, letterSpacing: "-.04em",
+                marginBottom: 20,
+              }}>
+                Code.<br />
+                <span className="grad">Judge.</span><br />
+                Compete.
+              </h1>
+
+              {/* Typewriter subtitle */}
+              <p className="anim-up d2" style={{
+                fontSize: "clamp(1rem, 2.2vw, 1.2rem)",
+                color: "var(--text-2)", marginBottom: 40, lineHeight: 1.65, maxWidth: 460,
+              }}>
+                The smart platform to{" "}
+                <Typewriter words={["solve DSA problems", "write Python & C++", "beat the leaderboard", "submit & get judged"]} />
               </p>
-            </div>
-          </div>
 
-          {/* Stats row */}
-          <div className="animate-fade-up delay-400" style={{
-            display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center",
-          }}>
-            <StatCard icon="🏆" value="50+" label="Problems" />
-            <StatCard icon="⚡" value="<1s" label="Judge Latency" />
-            <StatCard icon="🔒" value="JWT" label="Auth System" />
-            <StatCard icon="🕹️" value="3" label="Languages" />
+              {/* Auth Card */}
+              <div className="anim-up d3 glass" style={{
+                padding: "28px 28px 24px",
+                maxWidth: 440,
+                animation: "pulse-glow 5s ease infinite",
+                borderRadius: "var(--r-xl)",
+              }}>
+                <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: 20 }}>
+                  Get Started — It&apos;s Free
+                </div>
+
+                {error && (
+                  <div className="anim-in" style={{
+                    background: "rgba(255,87,87,.1)", border: "1px solid rgba(255,87,87,.25)",
+                    padding: "10px 14px", borderRadius: "var(--r-md)",
+                    fontSize: ".82rem", color: "#ff9999", marginBottom: 16,
+                    display: "flex", alignItems: "flex-start", gap: 8,
+                  }}>
+                    <span>⚠️</span><span>{error}</span>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+                  <div>
+                    <div style={{ fontSize: ".72rem", color: "var(--text-3)", marginBottom: 6, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Email</div>
+                    <input id="email" className="input" type="email" placeholder="you@example.com"
+                      value={email} onChange={e => setEmail(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && void login()} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: ".72rem", color: "var(--text-3)", marginBottom: 6, fontWeight: 600, letterSpacing: ".03em", textTransform: "uppercase" }}>Password</div>
+                    <input id="password" className="input" type="password" placeholder="••••••••"
+                      value={password} onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && void login()} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <button id="btn-login" className="btn btn-primary" style={{ flex: 1 }}
+                      disabled={busy} onClick={() => void login()}>
+                      {busy ? "⏳ Signing in…" : "→ Login"}
+                    </button>
+                    <button id="btn-register" className="btn btn-outline" style={{ flex: 1 }}
+                      disabled={busy} onClick={() => void register()}>
+                      Register
+                    </button>
+                  </div>
+                  <div style={{ textAlign: "center", fontSize: ".72rem", color: "var(--text-3)", paddingTop: 4 }}>
+                    Demo:{" "}
+                    <code style={{ color: "var(--cyan)", fontFamily: "var(--font-mono)" }}>demo@local.dev</code>
+                    {" / "}
+                    <code style={{ color: "var(--cyan)", fontFamily: "var(--font-mono)" }}>password123</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── RIGHT: Floating Visual ── */}
+            <div className="anim-left d2" style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: 20, alignItems: "flex-start" }}>
+              <FloatingCodeCard />
+
+              {/* Submission result mini card */}
+              <div className="glass anim-float" style={{
+                padding: "14px 18px",
+                animation: "float 6s ease-in-out infinite 2s",
+                display: "flex", alignItems: "center", gap: 12,
+                alignSelf: "flex-end", marginTop: -10,
+              }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(0,229,160,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>✅</div>
+                <div>
+                  <div style={{ fontWeight: 700, color: "var(--green)", fontSize: ".85rem" }}>Accepted</div>
+                  <div style={{ color: "var(--text-3)", fontSize: ".72rem" }}>8/8 tests · 45ms</div>
+                </div>
+              </div>
+
+              {/* Language badges */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["🐍","Python","#3776AB"], ["⚡","C++","#00599C"], ["🟨","JS","#F7DF1E"]].map(([icon, name, color]) => (
+                  <div key={name} style={{
+                    padding: "6px 13px", borderRadius: "var(--r-full)",
+                    background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)",
+                    fontSize: ".75rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 5,
+                  }}>
+                    <span>{icon}</span>
+                    <span style={{ color }}>{name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ── Features Section ── */}
-        <section style={{ padding: "80px 2rem", maxWidth: 1100, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "2rem", marginBottom: 12 }}>
-            Built for <span className="gradient-text">serious coders</span>
-          </h2>
-          <p style={{ textAlign: "center", color: "var(--text-muted)", marginBottom: 48 }}>
-            Everything you need to sharpen your algorithmic thinking.
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
+        {/* ──────────── STATS STRIP ──────────── */}
+        <div className="divider" />
+        <section style={{ padding: "48px min(5vw,64px)", maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "clamp(24px,5vw,80px)", flexWrap: "wrap" }}>
             {[
-              { icon: "🧠", title: "Monaco Editor", desc: "The same editor used in VS Code — syntax highlighting, autocomplete, and more." },
-              { icon: "⚙️", title: "Real-time Judge", desc: "Submissions are evaluated in milliseconds with per-test case breakdown." },
-              { icon: "📊", title: "Leaderboard", desc: "Track your best solutions. Beat your own time. Climb the ranks." },
-              { icon: "🌐", title: "REST API", desc: "Full OpenAPI documentation at /api/docs. Build integrations on top." },
-            ].map(f => (
-              <div key={f.title} className="glass animate-fade-up" style={{ padding: "24px" }}>
-                <div style={{ fontSize: "2rem", marginBottom: 12 }}>{f.icon}</div>
-                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8 }}>{f.title}</h3>
-                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>{f.desc}</p>
+              { val: "50+", label: "DSA Problems", icon: "🧩" },
+              { val: "<1s", label: "Judge Speed", icon: "⚡" },
+              { val: "3",   label: "Languages",   icon: "🌐" },
+              { val: "JWT", label: "Secure Auth",  icon: "🔒" },
+            ].map(s => (
+              <div key={s.label} className="anim-up" style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.8rem", marginBottom: 4 }}>{s.icon}</div>
+                <div style={{ fontSize: "2.2rem", fontWeight: 900, letterSpacing: "-.04em" }} className="grad">{s.val}</div>
+                <div style={{ fontSize: ".78rem", color: "var(--text-3)", marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <div className="divider" />
+
+        {/* ──────────── HOW IT WORKS ──────────── */}
+        <section style={{ padding: "80px min(5vw,64px)", maxWidth: 1200, margin: "0 auto" }}>
+          <div className="anim-up" style={{ textAlign: "center", marginBottom: 56 }}>
+            <div style={{ display: "inline-block", padding: "4px 14px", borderRadius: "var(--r-full)", background: "rgba(0,212,255,.1)", border: "1px solid rgba(0,212,255,.2)", color: "var(--cyan)", fontSize: ".72rem", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 16 }}>
+              HOW IT WORKS
+            </div>
+            <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, letterSpacing: "-.03em" }}>
+              From code to verdict <span className="grad">in seconds</span>
+            </h2>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 20 }}>
+            {[
+              { n: "01", icon: "🔐", title: "Sign Up Free",       desc: "Create your account in seconds. No credit card. No limits." },
+              { n: "02", icon: "📋", title: "Pick a Problem",     desc: "Browse our curated library of DSA challenges, sorted by difficulty." },
+              { n: "03", icon: "✍️", title: "Write Your Solution", desc: "Use the Monaco editor with Python, C++, or JavaScript." },
+              { n: "04", icon: "🏆", title: "Get Judged",          desc: "Submit code and get instant feedback with per-test results." },
+            ].map((s, i) => (
+              <div key={s.n} className={`glass anim-up d${i + 1}`} style={{ padding: "28px 24px" }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: "rgba(109,93,255,.12)", border: "1px solid rgba(109,93,255,.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "1.3rem", marginBottom: 16,
+                }}>
+                  {s.icon}
+                </div>
+                <div style={{ fontSize: ".7rem", color: "var(--violet)", fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 8 }}>
+                  STEP {s.n}
+                </div>
+                <h3 style={{ fontWeight: 700, fontSize: ".95rem", marginBottom: 8 }}>{s.title}</h3>
+                <p style={{ fontSize: ".82rem", color: "var(--text-2)", lineHeight: 1.65 }}>{s.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
+        {/* ──────────── FEATURES ──────────── */}
+        <section style={{ padding: "0 min(5vw,64px) 80px", maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ position: "relative", borderRadius: "var(--r-xl)", overflow: "hidden", padding: "56px 48px" }}>
+            <div className="aurora-bg" />
+            <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px,1fr))", gap: 24 }}>
+              <div className="anim-up" style={{ gridColumn: "1/-1", marginBottom: 8 }}>
+                <h2 style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)", fontWeight: 900, letterSpacing: "-.03em" }}>
+                  Built for <span className="grad-warm">serious coders</span>
+                </h2>
+                <p style={{ color: "var(--text-2)", marginTop: 10, maxWidth: 500 }}>
+                  Every feature designed to maximize your algorithmic thinking speed.
+                </p>
+              </div>
+              {[
+                { icon: "🧠", color: "rgba(109,93,255,.15)", title: "Monaco Editor",     desc: "VS Code's editor in the browser. Syntax highlighting, IntelliSense, and more." },
+                { icon: "⚙️", color: "rgba(0,212,255,.12)",  title: "Inline Judge",      desc: "Serverless code evaluation — no waiting, instant feedback on all test cases." },
+                { icon: "📐", color: "rgba(0,229,160,.12)",  title: "Multiple Languages", desc: "Python, C++, JavaScript. Pick your weapon, we handle the rest." },
+                { icon: "📖", color: "rgba(255,183,64,.12)", title: "OpenAPI Docs",       desc: "Every endpoint documented. Build your own integrations on top of our API." },
+              ].map((f, i) => (
+                <div key={f.title} className={`glass anim-up d${i + 1}`} style={{ padding: "24px" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: f.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", marginBottom: 14 }}>
+                    {f.icon}
+                  </div>
+                  <h3 style={{ fontWeight: 700, fontSize: ".95rem", marginBottom: 8 }}>{f.title}</h3>
+                  <p style={{ fontSize: ".82rem", color: "var(--text-2)", lineHeight: 1.65 }}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ──────────── FOOTER ──────────── */}
+        <div className="divider" />
         <footer style={{
-          textAlign: "center", padding: "24px 2rem",
-          borderTop: "1px solid var(--border)",
-          color: "var(--text-muted)", fontSize: "0.8rem",
+          padding: "32px min(5vw,64px)",
+          display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center",
+          gap: 16,
         }}>
-          AlgoScheduler · <a href="/api/docs">API Docs</a> · Built with ❤️ using Fastify + React + Monaco
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: "linear-gradient(135deg, var(--violet), var(--purple))",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".85rem",
+            }}>⚡</div>
+            <span style={{ fontWeight: 700, fontSize: ".85rem" }}>AlgoScheduler</span>
+          </div>
+          <div style={{ fontSize: ".78rem", color: "var(--text-3)" }}>
+            Built with ❤️ by{" "}
+            <span style={{ color: "var(--violet)", fontWeight: 700 }}>Abhijeet Singh Rana</span>
+            {" "}· Fastify + React + Monaco · <a href="/api/docs" style={{ color: "var(--cyan)" }}>API Docs</a>
+          </div>
+          <div style={{ fontSize: ".75rem", color: "var(--text-3)" }}>
+            Powered by Neon · Vercel · Node 20
+          </div>
         </footer>
       </div>
     );
   }
 
-  /* ─── DASHBOARD (Authenticated) ──────────────────────────────────── */
+  /* ── DASHBOARD (Authenticated) ──────────────────────────────────────── */
   return (
-    <div style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg-deep)", position: "relative", zIndex: 1 }}>
+      {/* Aurora orbs in dashboard */}
+      <div className="orb" style={{ width: 400, height: 400, top: "-100px", right: "-50px", background: "radial-gradient(circle, rgba(109,93,255,.07) 0%, transparent 70%)", zIndex: 0, pointerEvents: "none", position: "fixed" }} />
+
       {/* ── Top Nav ── */}
       <nav style={{
-        position: "sticky", top: 0, zIndex: 100,
-        padding: "0 1.5rem",
-        height: 60,
+        position: "relative", zIndex: 100,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "rgba(5,8,22,0.85)",
+        padding: "0 20px", height: 58, flexShrink: 0,
+        background: "rgba(3,1,10,0.8)",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
-        backdropFilter: "blur(20px)",
+        backdropFilter: "blur(24px)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{
-            width: 28, height: 28, borderRadius: 7,
-            background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "0.85rem",
+            width: 28, height: 28, borderRadius: 8,
+            background: "linear-gradient(135deg, var(--violet), var(--purple))",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".9rem",
           }}>⚡</div>
-          <span style={{ fontWeight: 800, fontSize: "0.95rem" }}>
-            Algo<span className="gradient-text">Scheduler</span>
+          <span style={{ fontWeight: 900, fontSize: ".95rem", letterSpacing: "-.02em" }}>
+            Algo<span className="grad">Scheduler</span>
           </span>
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Active user indicator */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8,
-            padding: "5px 12px", background: "rgba(16,185,129,0.1)",
-            border: "1px solid rgba(16,185,129,0.2)", borderRadius: 99,
-            fontSize: "0.75rem", color: "var(--green)", fontWeight: 600,
+          <div style={{
+            display: "flex", alignItems: "center", gap: 7,
+            padding: "5px 12px", borderRadius: "var(--r-full)",
+            background: "rgba(0,229,160,.08)", border: "1px solid rgba(0,229,160,.18)",
+            fontSize: ".72rem", color: "var(--green)", fontWeight: 600,
           }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)", display: "inline-block" }} />
             {email}
           </div>
-          <button id="btn-logout" className="btn btn-ghost" style={{ padding: "6px 14px", fontSize: "0.8rem" }} onClick={() => void logout()}>
+          <button id="btn-logout" className="btn btn-ghost" style={{ padding: "6px 14px", fontSize: ".78rem", borderRadius: "var(--r-full)" }} onClick={() => void logout()}>
             Sign out
           </button>
         </div>
@@ -657,223 +710,173 @@ export function App() {
 
       {/* ── Error Banner ── */}
       {error && (
-        <div className="animate-fade-in" style={{
-          margin: "12px 1.5rem 0",
-          background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
-          padding: "10px 16px", borderRadius: "var(--radius-md)",
-          fontSize: "0.85rem", color: "#fca5a5",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+        <div className="anim-in" style={{
+          margin: "10px 16px 0",
+          background: "rgba(255,87,87,.08)", border: "1px solid rgba(255,87,87,.2)",
+          padding: "9px 14px", borderRadius: "var(--r-md)", fontSize: ".82rem", color: "#ff9999",
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
         }}>
           <span>⚠️ {error}</span>
           <button type="button" onClick={() => setError(null)}
-            style={{ background: "none", border: "none", color: "#fca5a5", cursor: "pointer", fontSize: "1rem" }}>×</button>
+            style={{ background: "none", border: "none", color: "#ff9999", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>×</button>
         </div>
       )}
 
-      {/* ── Main Layout ── */}
-      <main style={{
-        display: "grid",
-        gridTemplateColumns: "280px 1fr",
-        gap: 0,
-        height: "calc(100vh - 60px)",
-        overflow: "hidden",
-      }}>
-        {/* ── Sidebar: Problem List ── */}
+      {/* ── Main ── */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative", zIndex: 1 }}>
+
+        {/* Sidebar */}
         <aside style={{
-          borderRight: "1px solid var(--border)",
-          display: "flex", flexDirection: "column",
-          overflow: "hidden",
+          width: 268, flexShrink: 0, display: "flex", flexDirection: "column",
+          borderRight: "1px solid rgba(255,255,255,.05)", overflow: "hidden",
         }}>
-          {/* Header */}
-          <div style={{
-            padding: "16px",
-            borderBottom: "1px solid var(--border)",
-          }}>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
-              Problems
-            </div>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              {problems.length} available
-            </div>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,.05)", flexShrink: 0 }}>
+            <div style={{ fontSize: ".65rem", color: "var(--text-3)", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }}>Problems</div>
+            <div style={{ fontSize: ".72rem", color: "var(--text-3)" }}>{problems.length} challenges available</div>
           </div>
-          {/* List */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {problems.length === 0 ? (
-                <div style={{ padding: "24px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  Loading problems…
-                </div>
-              ) : (
-                problems.map((p, i) => (
-                  <ProblemRow
-                    key={p.id}
-                    problem={p}
-                    index={i}
-                    selected={p.slug === selectedSlug}
-                    onClick={() => setSelectedSlug(p.slug)}
-                  />
-                ))
-              )}
+          <div style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {problems.length === 0
+                ? <div style={{ padding: "32px 0", textAlign: "center", color: "var(--text-3)", fontSize: ".82rem" }}>Loading…</div>
+                : problems.map((p, i) => (
+                    <ProblemRow key={p.id} p={p} i={i} sel={p.slug === selectedSlug} onClick={() => setSelectedSlug(p.slug)} />
+                  ))
+              }
             </div>
           </div>
         </aside>
 
-        {/* ── Main Panel ── */}
-        <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {!detail ? (
-            /* Empty state */
-            <div style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              color: "var(--text-muted)",
-            }}>
-              <div style={{ fontSize: "3rem", marginBottom: 16, animation: "float 3s ease-in-out infinite" }}>👈</div>
-              <div style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-secondary)" }}>Select a problem to start</div>
-              <div style={{ fontSize: "0.85rem", marginTop: 8 }}>
-                {problems.length} problems available in the catalog
-              </div>
-            </div>
-          ) : (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              {/* Problem header */}
-              <div style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid var(--border)",
-                display: "flex", alignItems: "center", gap: 12,
-              }}>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 4 }}>{detail.title}</h2>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <DiffBadge difficulty={detail.difficulty} />
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                      {detail.publicSampleCount} sample{detail.publicSampleCount !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-                {/* Language selector */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <select
-                    id="language-select"
-                    className="select"
-                    value={language}
-                    onChange={e => {
-                      const lang = e.target.value;
-                      setLanguage(lang);
-                      const block = detail.languages.find(l => l.language === lang);
-                      if (block) setSource(block.starterCode);
-                    }}
-                  >
-                    {detail.languages.map(l => (
-                      <option key={l.language} value={l.language}>{l.language}</option>
-                    ))}
-                  </select>
-                  <button id="btn-run" className="btn btn-ghost" style={{ padding: "7px 16px" }}
-                    disabled={!authed || busy} onClick={() => void submit("run")}>
-                    {busy && activeTab === "submit" ? "⏳" : "▶ Run"}
-                  </button>
-                  <button id="btn-submit" className="btn btn-primary" style={{ padding: "7px 16px" }}
-                    disabled={!authed || busy} onClick={() => void submit("submit")}>
-                    {busy ? "⏳ Judging…" : "🚀 Submit"}
-                  </button>
+        {/* Main panel */}
+        {!detail ? (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-3)", gap: 12 }}>
+            <div style={{ fontSize: "3rem", animation: "float 3s ease-in-out infinite" }}>👈</div>
+            <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--text-2)" }}>Select a problem to start</div>
+            <div style={{ fontSize: ".82rem" }}>{problems.length} problems in the catalog</div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* Problem header */}
+            <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ fontSize: "1rem", fontWeight: 800, marginBottom: 4, letterSpacing: "-.02em" }}>{detail.title}</h2>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <DiffBadge d={detail.difficulty} />
+                  <span style={{ fontSize: ".72rem", color: "var(--text-3)" }}>{detail.publicSampleCount} sample{detail.publicSampleCount !== 1 ? "s" : ""}</span>
                 </div>
               </div>
-
-              {/* Tab bar */}
-              <div style={{
-                display: "flex", gap: 0,
-                borderBottom: "1px solid var(--border)",
-                padding: "0 20px",
-              }}>
-                {(["problem", "submit"] as const).map(tab => (
-                  <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-                    style={{
-                      padding: "10px 16px", background: "none", border: "none",
-                      borderBottom: `2px solid ${activeTab === tab ? "var(--accent)" : "transparent"}`,
-                      color: activeTab === tab ? "var(--text-primary)" : "var(--text-muted)",
-                      fontFamily: "var(--font-sans)", fontSize: "0.82rem", fontWeight: 600,
-                      cursor: "pointer", transition: "color 0.2s",
-                      textTransform: "capitalize",
-                    }}>
-                    {tab === "problem" ? "📖 Problem" : "📊 Results"}
-                    {tab === "submit" && submission && (
-                      <span style={{
-                        marginLeft: 6, padding: "2px 7px",
-                        background: submission.verdict === "AC" ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)",
-                        color: submission.verdict === "AC" ? "var(--green)" : "var(--red)",
-                        borderRadius: 99, fontSize: "0.68rem",
-                      }}>
-                        {submission.verdict ?? "?"}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Content area */}
-              <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-                {/* Problem description (left) */}
-                <div style={{
-                  width: "42%", overflowY: "auto", padding: "20px",
-                  borderRight: "1px solid var(--border)",
-                  display: activeTab === "problem" ? "block" : "none",
+              <select id="language-select" className="select" value={language}
+                onChange={e => {
+                  const lang = e.target.value;
+                  setLanguage(lang);
+                  const blk = detail.languages.find(l => l.language === lang);
+                  if (blk) setSource(blk.starterCode);
                 }}>
+                {detail.languages.map(l => <option key={l.language} value={l.language}>{l.language}</option>)}
+              </select>
+              <button id="btn-run" className="btn btn-ghost" style={{ padding: "7px 16px", fontSize: ".8rem", borderRadius: "var(--r-full)" }}
+                disabled={!authed || busy} onClick={() => void submit("run")}>
+                ▶ Run
+              </button>
+              <button id="btn-submit" className="btn btn-primary" style={{ padding: "7px 20px", fontSize: ".8rem" }}
+                disabled={!authed || busy} onClick={() => void submit("submit")}>
+                {busy ? "⏳ Judging…" : "🚀 Submit"}
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,.05)", padding: "0 18px", flexShrink: 0 }}>
+              {(["problem", "submit"] as const).map(tab => (
+                <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{
+                  padding: "10px 14px", background: "none", border: "none",
+                  borderBottom: `2px solid ${activeTab === tab ? "var(--violet)" : "transparent"}`,
+                  color: activeTab === tab ? "var(--text-1)" : "var(--text-3)",
+                  fontFamily: "var(--font)", fontSize: ".78rem", fontWeight: 600,
+                  cursor: "pointer", transition: "color .2s", textTransform: "capitalize",
+                }}>
+                  {tab === "problem" ? "📖 Problem" : "📊 Results"}
+                  {tab === "submit" && submission && (
+                    <span style={{
+                      marginLeft: 6, padding: "2px 7px", borderRadius: "var(--r-full)",
+                      background: submission.verdict === "AC" ? "rgba(0,229,160,.15)" : "rgba(255,87,87,.15)",
+                      color: submission.verdict === "AC" ? "var(--green)" : "var(--red)",
+                      fontSize: ".65rem", fontWeight: 800,
+                    }}>{submission.verdict ?? "?"}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+              {/* Left panel */}
+              <div style={{
+                width: "40%", overflowY: "auto", padding: "18px 20px",
+                borderRight: "1px solid rgba(255,255,255,.05)",
+              }}>
+                {activeTab === "problem" ? (
                   <pre style={{
                     whiteSpace: "pre-wrap", wordBreak: "break-word",
-                    fontFamily: "var(--font-sans)", fontSize: "0.875rem",
-                    color: "var(--text-secondary)", lineHeight: 1.7,
-                  }}>
-                    {detail.descriptionMd}
-                  </pre>
-                </div>
-
-                {/* Results panel (left when on submit tab) */}
-                {activeTab === "submit" && (
-                  <div style={{ width: "42%", overflowY: "auto", padding: "20px", borderRight: "1px solid var(--border)" }}>
-                    {busy ? (
-                      <div style={{ textAlign: "center", paddingTop: 60, color: "var(--text-muted)" }}>
-                        <div style={{ fontSize: "2rem", marginBottom: 16, animation: "float 1s ease-in-out infinite" }}>⚙️</div>
-                        <div style={{ fontWeight: 600 }}>Judging your code…</div>
-                        <div style={{ fontSize: "0.82rem", marginTop: 8 }}>Typically completes in under 1 second</div>
-                      </div>
-                    ) : submission ? (
-                      <VerdictDisplay submission={submission} />
-                    ) : (
-                      <div style={{ textAlign: "center", paddingTop: 60, color: "var(--text-muted)" }}>
-                        <div style={{ fontSize: "2rem", marginBottom: 12 }}>🚀</div>
-                        <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>Submit your code</div>
-                        <div style={{ fontSize: "0.82rem", marginTop: 8 }}>Click "Submit" to judge against all test cases</div>
-                      </div>
-                    )}
-                  </div>
+                    fontFamily: "var(--font)", fontSize: ".85rem",
+                    color: "var(--text-2)", lineHeight: 1.75,
+                  }}>{detail.descriptionMd}</pre>
+                ) : (
+                  busy ? (
+                    <div style={{ textAlign: "center", paddingTop: 60, color: "var(--text-3)" }}>
+                      <div style={{ fontSize: "2rem", marginBottom: 16, animation: "float 1.2s ease-in-out infinite" }}>⚙️</div>
+                      <div style={{ fontWeight: 700, color: "var(--text-2)" }}>Judging your code…</div>
+                      <div style={{ fontSize: ".78rem", marginTop: 8 }}>Usually under 1 second</div>
+                    </div>
+                  ) : submission ? (
+                    <VerdictCard submission={submission} />
+                  ) : (
+                    <div style={{ textAlign: "center", paddingTop: 60, color: "var(--text-3)" }}>
+                      <div style={{ fontSize: "2rem", marginBottom: 12 }}>🚀</div>
+                      <div style={{ fontWeight: 700, color: "var(--text-2)" }}>Ready to judge</div>
+                      <div style={{ fontSize: ".78rem", marginTop: 8 }}>Click Submit to run against all tests</div>
+                    </div>
+                  )
                 )}
+              </div>
 
-                {/* Monaco Editor (right) */}
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                  <Editor
-                    height="100%"
-                    theme="vs-dark"
-                    language={monacoLanguage}
-                    value={source}
-                    onChange={v => setSource(v ?? "")}
-                    options={{
-                      fontSize: 14,
-                      fontFamily: "JetBrains Mono, ui-monospace, monospace",
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      padding: { top: 16 },
-                      lineNumbers: "on",
-                      renderLineHighlight: "all",
-                      smoothScrolling: true,
-                      cursorBlinking: "smooth",
-                      cursorSmoothCaretAnimation: "on",
-                    }}
-                  />
-                </div>
+              {/* Monaco editor */}
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                <Editor
+                  height="100%"
+                  theme="vs-dark"
+                  language={monacoLang}
+                  value={source}
+                  onChange={v => setSource(v ?? "")}
+                  options={{
+                    fontSize: 14,
+                    fontFamily: "JetBrains Mono, ui-monospace, monospace",
+                    fontLigatures: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    padding: { top: 16 },
+                    lineNumbers: "on",
+                    renderLineHighlight: "all",
+                    smoothScrolling: true,
+                    cursorBlinking: "smooth",
+                    cursorSmoothCaretAnimation: "on",
+                    bracketPairColorization: { enabled: true },
+                  }}
+                />
               </div>
             </div>
-          )}
-        </div>
-      </main>
+          </div>
+        )}
+      </div>
+
+      {/* Dashboard micro-footer */}
+      <div style={{
+        flexShrink: 0, padding: "5px 16px",
+        borderTop: "1px solid rgba(255,255,255,.04)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        fontSize: ".7rem", color: "var(--text-3)", background: "rgba(3,1,10,.6)",
+      }}>
+        <span>AlgoScheduler · Built by <span style={{ color: "var(--violet)", fontWeight: 700 }}>Abhijeet Singh Rana</span></span>
+        <a href="/api/docs" target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>API Docs ↗</a>
+      </div>
     </div>
   );
 }
