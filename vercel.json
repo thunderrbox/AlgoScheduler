@@ -1,23 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
-  "_comment_1": "FULL-STACK VERCEL DEPLOYMENT — Frontend (static) + Backend API (serverless)",
-  "_comment_2": "Frontend: Vite builds React into frontend/dist/",
-  "_comment_3": "Backend:  api/[...path].ts handles ALL /api/* requests as a serverless function",
-
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
-  "framework": "vite",
-
+  "framework": null,
   "rewrites": [
     {
-      "_comment": "Route all /api/* requests to the Vercel serverless function (backend)",
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },
     {
-      "_comment": "SPA catch-all: all other requests serve the React app (client-side routing)",
       "source": "/(.*)",
       "destination": "/index.html"
     }
