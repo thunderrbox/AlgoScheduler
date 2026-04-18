@@ -4,6 +4,11 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install --include=optional",
   "framework": null,
+  "functions": {
+    "api/[...path].ts": {
+      "includeFiles": "backend/api/dist/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",

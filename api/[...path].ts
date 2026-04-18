@@ -1,38 +1,38 @@
 /**
  * VERCEL SERVERLESS API HANDLER
  * -----------------------------
- * This is the entry point for ALL `/api/*` requests on Vercel.
+ * Entry point for ALL `/api/*` requests on Vercel.
  *
  * HOW IT WORKS:
- * 1. Vercel routes any request matching `/api/*` to this file (via vercel.json rewrites).
- * 2. This file creates a Fastify instance (cached across invocations for performance).
- * 3. The Fastify app handles the request using all registered routes (auth, problems, submissions).
- * 4. The response is sent back to the browser.
+ * 1. Vercel routes any request matching `/api/*` to this file (see vercel.json).
+ * 2. This file initialises a Fastify app on first request (cold start) and
+ *    caches it in memory for subsequent warm invocations.
+ * 3. The Fastify app handles the request using all registered routes.
  *
- * WHY:
- * Vercel runs Node.js in serverless functions. Instead of a persistent server process,
- * each request spins up this function. The Fastify instance is reused across "warm" invocations.
- *
- * IMPORTANT: This file uses CommonJS-style handler because Vercel's @vercel/node expects it.
+ * WHY THE DIST PATH:
+ * `build:vercel` compiles TypeScript → `backend/api/dist/`.
+ * We import the *compiled JS* at runtime, not the raw TypeScript source.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-// Cache the Fastify app across warm invocations (avoids re-initializing on every request)
+// Cached Fastify handler — reused across warm Vercel invocations
 let handler: ((req: IncomingMessage, res: ServerResponse) => void) | null = null;
 
 /**
- * Initialize the Fastify app once, then reuse it for subsequent requests.
- * This is called "cold start" on the first request, then cached.
+ * Initialise the Fastify app once, then cache the Node.js http handler.
+ * On "cold start" (first request) this takes a few hundred milliseconds.
+ * On subsequent "warm" requests it returns instantly.
  */
 async function getHandler(): Promise<(req: IncomingMessage, res: ServerResponse) => void> {
   if (handler) return handler;
 
-  // Dynamic import to load the app factory
-  const { createApp } = await import("../backend/api/src/create-app.js");
+  // Import the compiled JS output of `backend/api/src/create-app.ts`
+  // (compiled by `npm run build -w backend-api` during `build:vercel`)
+  const { createApp } = await import("../backend/api/dist/create-app.js");
   const app = await createApp({ logger: false });
   await app.ready();
 
-  // Create a raw Node.js handler from the Fastify instance
+  // Wrap the Fastify instance as a raw Node.js http handler
   handler = (req: IncomingMessage, res: ServerResponse) => {
     app.server.emit("request", req, res);
   };
@@ -42,7 +42,7 @@ async function getHandler(): Promise<(req: IncomingMessage, res: ServerResponse)
 
 /**
  * Vercel serverless function entry point.
- * Every request to /api/* goes through here.
+ * Every GET/POST/etc. to /api/* is routed here by vercel.json.
  */
 export default async function (req: IncomingMessage, res: ServerResponse) {
   const h = await getHandler();
