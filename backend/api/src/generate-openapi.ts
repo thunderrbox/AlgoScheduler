@@ -28,7 +28,8 @@ const required = {
   DATABASE_URL:
     process.env.DATABASE_URL ??
     "postgresql://scee:scee@localhost:5432/scee?schema=public",
-  REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
+  // REDIS_URL intentionally omitted — it's optional, and omitting it
+  // activates "serverless mode" (inline judge, no BullMQ)
   JWT_ACCESS_SECRET:
     process.env.JWT_ACCESS_SECRET ?? "0".repeat(32),
   JWT_REFRESH_SECRET:

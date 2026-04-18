@@ -29,8 +29,11 @@
     "_comment_build": "Full monorepo build (all packages in dependency order)",
     "build": "npm run build -w @scee/shared && npm run build -w @scee/db && npm run build -w backend-api && npm run build -w backend-worker && npm run build -w frontend",
 
-    "_comment_build_frontend": "VERCEL USES THIS — builds only shared libs + frontend (no backend, no DB needed)",
-    "build:frontend": "npm run build -w @scee/shared && npm run build -w frontend"
+    "_comment_build_frontend": "VERCEL FRONTEND ONLY — builds shared libs + frontend (no backend)",
+    "build:frontend": "npm run build -w @scee/shared && npm run build -w frontend",
+
+    "_comment_build_vercel": "VERCEL FULL-STACK — builds shared + DB + API + frontend (used by vercel.json)",
+    "build:vercel": "npm run build -w @scee/shared && npm run build -w @scee/db && npm run build -w backend-api && npm run build -w frontend"
   },
 
   "devDependencies": {

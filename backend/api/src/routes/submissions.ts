@@ -3,12 +3,17 @@
  * -----------------
  * Handles the logic for students submitting code for evaluation.
  * 
+ * DEPLOYMENT MODES:
+ * - WITH Redis (VPS/Railway): Enqueues job to BullMQ → separate worker judges it.
+ * - WITHOUT Redis (Vercel): Runs the judge INLINE within the same request.
+ *   This is controlled by the REDIS_URL env var — when empty, serverless mode activates.
+ * 
  * Flow:
  * 1. User POSTs source code + problem ID to `/submissions`.
  * 2. API validates the request and creates a "queued" row in Postgres.
- * 3. API enqueues a job in BullMQ (Redis) with the submission ID.
- * 4. The `backend-worker` picks up the job, marks it "running", and judges it.
- * 5. The frontend polls GET `/submissions/:id` to show results once "completed".
+ * 3a. (Redis mode) API enqueues a job → worker picks it up later.
+ * 3b. (Serverless mode) API runs the judge directly → submission completes immediately.
+ * 4. The frontend polls GET `/submissions/:id` to show results.
  */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
@@ -18,7 +23,8 @@ import {
   SubmissionStatus,
 } from "@scee/db";
 import { createSubmissionBodySchema } from "@scee/shared";
-import { enqueueJudgeJob } from "../queue/judge-queue.js";
+import { env } from "../env.js";
+import { runInlineJudge } from "../judge/inline-judge.js";
 
 
 async function authenticate(
@@ -89,8 +95,21 @@ export async function submissionRoutes(app: FastifyInstance): Promise<void> {
           status: SubmissionStatus.queued,
         },
       });
-      await enqueueJudgeJob(submission.id);
+
+      // DEPLOYMENT MODE SWITCH:
+      // If Redis is configured → enqueue to BullMQ (traditional server mode)
+      // If no Redis → run the judge inline (Vercel serverless mode)
+      if (env.REDIS_URL) {
+        // Dynamic import so BullMQ is only loaded when Redis is available
+        const { enqueueJudgeJob } = await import("../queue/judge-queue.js");
+        await enqueueJudgeJob(submission.id);
+      } else {
+        // Serverless mode: run judge directly in this request
+        await runInlineJudge(submission.id);
+      }
+
       const base = `${req.protocol}://${req.hostname}`;
+
       const port = (req.socket as { localPort?: number }).localPort;
       const pollUrl =
         port && port !== 80 && port !== 443

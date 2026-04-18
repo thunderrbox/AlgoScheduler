@@ -17,11 +17,15 @@ const envSchema = z.object({
   /** development | production | test */
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   
-  /** PostgreSQL connection string */
+  /** PostgreSQL connection string (required — use Neon.tech free tier for Vercel) */
   DATABASE_URL: z.string().min(1),
   
-  /** Redis connection URL for BullMQ jobs */
-  REDIS_URL: z.string().min(1),
+  /** 
+   * Redis connection URL for BullMQ jobs.
+   * OPTIONAL: When empty, the API runs the judge INLINE (no worker needed).
+   * This is the mode used on Vercel where persistent workers aren't possible.
+   */
+  REDIS_URL: z.string().optional().default(""),
   
   /** Secret for signing Access JWTs (short-lived) */
   JWT_ACCESS_SECRET: z.string().min(32),
