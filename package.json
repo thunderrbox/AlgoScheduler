@@ -43,5 +43,9 @@
 
   "engines": {
     "node": "20.x"
+  },
+
+  "overrides": {
+    "rollup": "4.34.9"
   }
 }
