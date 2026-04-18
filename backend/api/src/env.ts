@@ -46,5 +46,20 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
 });
 
-export const env = envSchema.parse(process.env);
+const result = envSchema.safeParse(process.env);
+
+if (!result.success) {
+  // Log clearly so Vercel's function runtime log shows what env vars are missing
+  console.error(
+    "[env] ❌ Missing / invalid environment variables:",
+    JSON.stringify(result.error.flatten().fieldErrors, null, 2),
+  );
+  // Throw a descriptive error so the serverless function returns JSON (not Vercel HTML)
+  throw new Error(
+    `Missing environment variables: ${Object.keys(result.error.flatten().fieldErrors).join(", ")}. ` +
+    `Please set them in your Vercel project's Environment Variables settings.`
+  );
+}
+
+export const env = result.data;
 
