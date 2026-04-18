@@ -1,18 +1,22 @@
 {
+  // BASE TSCONFIG — Shared compiler options for all backend/package workspaces.
+  // frontend/ has its own tsconfig because it uses "bundler" module resolution.
+  // Each workspace extends this file: "extends": "../../tsconfig.base.json"
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "target": "ES2022",                       // Modern JS output
+    "module": "NodeNext",                     // Node.js ESM module system
+    "moduleResolution": "NodeNext",           // Resolves .js extensions in imports
+    "strict": true,                           // Full type safety
+    "skipLibCheck": true,                     // Skip checking node_modules .d.ts (faster)
+    "esModuleInterop": true,                  // Allows `import x from 'commonjs-pkg'`
+    "forceConsistentCasingInFileNames": true,  // Prevents cross-OS bugs
+    "resolveJsonModule": true,                // Allows importing .json files
+    "declaration": true,                      // Generates .d.ts for workspace consumers
+    "declarationMap": true,                   // Source maps for .d.ts files
+    "sourceMap": true,                        // Debug source maps
+    "noUnusedLocals": true,                   // Error on unused variables
+    "noUnusedParameters": true,               // Error on unused function params
+    "noFallthroughCasesInSwitch": true        // Error on switch fallthrough
   }
 }
+

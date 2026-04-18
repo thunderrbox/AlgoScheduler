@@ -2,11 +2,20 @@
   "name": "backend-worker",
   "private": true,
   "type": "module",
+
+  "_comment": "BullMQ judge worker — NOT an HTTP server. Polls Redis queue for jobs. Deployed to Railway via Dockerfile.worker",
+
   "scripts": {
+    "_comment_dev": "Hot-reload worker using tsx",
     "dev": "tsx watch src/index.ts",
+
+    "_comment_build": "Compile TS → dist/",
     "build": "tsc -p tsconfig.json",
+
+    "_comment_start": "Production entry point — Railway/Docker runs this after build",
     "start": "node dist/index.js"
   },
+
   "dependencies": {
     "@scee/db": "*",
     "@scee/shared": "*",
@@ -19,3 +28,4 @@
     "typescript": "^5.7.3"
   }
 }
+

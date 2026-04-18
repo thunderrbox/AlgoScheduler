@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+
+  "_comment": "Shared Zod schemas + constants used by BOTH frontend and backend. Import via: import { loginBodySchema } from '@scee/shared'",
+
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,14 +14,17 @@
       "import": "./dist/index.js"
     }
   },
+
   "scripts": {
+    "_comment_build": "Compile TypeScript to dist/ — must run BEFORE any consumer workspace builds",
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch"
   },
+
   "dependencies": {
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
   }
-}
+}

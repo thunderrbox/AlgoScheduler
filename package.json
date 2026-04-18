@@ -1,25 +1,43 @@
 {
   "name": "smart-code-evaluation-engine",
   "private": true,
+
+  "_comment": "NPM Workspaces monorepo — frontend, backend/api, backend/worker, packages/db, packages/shared",
+
   "workspaces": [
     "frontend",
     "backend/*",
     "packages/*"
   ],
+
   "scripts": {
-    "postinstall": "npm run db:generate -w @scee/db && npm run build -w @scee/shared && npm run build -w @scee/db",
+    "_comment_postinstall": "Auto-runs after `npm install` — generates Prisma client and builds shared libs",
+    "postinstall": "npx prisma generate --schema=packages/db/prisma/schema.prisma || true && npm run build -w @scee/shared",
+
+    "_comment_dev": "Launches API + Worker + Frontend concurrently for local development",
     "dev": "concurrently -n api,worker,web -c blue,magenta,green \"npm run dev -w backend-api\" \"npm run dev -w backend-worker\" \"npm run dev -w frontend\"",
+
+    "_comment_db": "Database management shortcuts (delegates to @scee/db workspace)",
     "db:generate": "npm run db:generate -w @scee/db",
     "db:migrate": "npm run db:migrate -w @scee/db",
     "db:push": "npm run db:push -w @scee/db",
     "db:seed": "npm run db:seed -w @scee/db",
+
+    "_comment_openapi": "Generates OpenAPI spec from running Fastify routes",
     "openapi": "npm run openapi -w backend-api",
-    "build": "npm run build -w @scee/shared && npm run build -w @scee/db && npm run build -w backend-api && npm run build -w backend-worker && npm run build -w frontend"
+
+    "_comment_build": "Full monorepo build (all packages in dependency order)",
+    "build": "npm run build -w @scee/shared && npm run build -w @scee/db && npm run build -w backend-api && npm run build -w backend-worker && npm run build -w frontend",
+
+    "_comment_build_frontend": "VERCEL USES THIS — builds only shared libs + frontend (no backend, no DB needed)",
+    "build:frontend": "npm run build -w @scee/shared && npm run build -w frontend"
   },
+
   "devDependencies": {
     "concurrently": "^9.1.2",
     "typescript": "~5.7.3"
   },
+
   "engines": {
     "node": ">=20"
   }

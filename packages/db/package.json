@@ -3,6 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+
+  "_comment_exports": "Other workspaces import this package via: import { prisma } from '@scee/db'",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,17 +13,26 @@
       "import": "./dist/index.js"
     }
   },
+
   "scripts": {
+    "_comment_build": "1) Generate Prisma Client from schema.prisma  2) Compile TS → dist/",
     "build": "prisma generate && tsc -p tsconfig.json",
+
+    "_comment_db_commands": "Database lifecycle management (run from monorepo root via 'npm run db:*')",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+
+    "_comment_prepare": "Auto-generates Prisma client when this package is installed",
     "prepare": "prisma generate"
   },
+
+  "_comment_seed": "Prisma seed command — populates problems and demo users for development",
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
+
   "dependencies": {
     "@prisma/client": "^6.3.1",
     "bcrypt": "^5.1.1"
@@ -33,3 +44,4 @@
     "typescript": "^5.7.3"
   }
 }
+

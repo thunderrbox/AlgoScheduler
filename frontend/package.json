@@ -2,11 +2,19 @@
   "name": "frontend",
   "private": true,
   "type": "module",
+
+  "_comment": "React SPA with Monaco Editor. Deployed to Vercel via vercel.json at monorepo root",
+
   "scripts": {
+    "_comment_dev": "Vite dev server with HMR on port 5173",
     "dev": "vite",
+
+    "_comment_build": "Type-check with tsc (no output), then bundle with Vite → dist/",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
+
     "preview": "vite preview"
   },
+
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "react": "^19.0.0",
@@ -20,3 +28,4 @@
     "vite": "^6.1.0"
   }
 }
+

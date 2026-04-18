@@ -1,18 +1,22 @@
 {
+  // FRONTEND TSCONFIG — Used by `tsc --noEmit` for type-checking only.
+  // Vite handles the actual bundling; TypeScript is just a linter here.
+  // Does NOT extend tsconfig.base.json because Vite uses "bundler" module resolution.
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],   // Browser APIs available
     "module": "ESNext",
     "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx",
+    "moduleResolution": "bundler",               // Vite's resolution strategy
+    "jsx": "react-jsx",                          // React 17+ JSX transform
     "strict": true,
-    "noEmit": true,
-    "isolatedModules": true,
+    "noEmit": true,                              // Only type-check, no output files
+    "isolatedModules": true,                     // Required for Vite/esbuild
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"]                     // Adds import.meta.env types
   },
   "include": ["src"]
 }
+
