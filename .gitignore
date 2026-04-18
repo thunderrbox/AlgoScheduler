@@ -7,6 +7,10 @@ node_modules
 .pnp
 .pnp.js
 
+# Lock file — excluded so Vercel generates a fresh Linux-compatible one
+# (Windows lockfile omits @rollup/rollup-linux-x64-gnu optional dependency)
+package-lock.json
+
 # Build Artifacts (TypeScript compiled output)
 dist
 .next
