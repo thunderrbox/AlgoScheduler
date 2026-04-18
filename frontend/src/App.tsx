@@ -771,7 +771,17 @@ export function App() {
                   const blk = detail.languages.find(l => l.language === lang);
                   if (blk) setSource(blk.starterCode);
                 }}>
-                {detail.languages.map(l => <option key={l.language} value={l.language}>{l.language}</option>)}
+                {detail.languages.map(l => {
+                  const labels: Record<string, string> = {
+                    python: "🐍 Python",
+                    javascript: "🟨 JavaScript",
+                    cpp: "⚡ C++",
+                    java: "☕ Java",
+                    typescript: "🔷 TypeScript",
+                    go: "🐹 Go",
+                  };
+                  return <option key={l.language} value={l.language}>{labels[l.language] ?? l.language}</option>;
+                })}
               </select>
               <button id="btn-run" className="btn btn-ghost" style={{ padding: "7px 16px", fontSize: ".8rem", borderRadius: "var(--r-full)" }}
                 disabled={!authed || busy} onClick={() => void submit("run")}>
