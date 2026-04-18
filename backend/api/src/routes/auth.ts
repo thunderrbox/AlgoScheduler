@@ -12,7 +12,7 @@
  * - Refresh Token: 7 days. Stored in DB and checked against a secure hash.
  */
 import type { FastifyInstance } from "fastify";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { prisma, Role } from "@scee/db";
 import {
   loginBodySchema,

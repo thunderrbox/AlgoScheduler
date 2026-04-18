@@ -2,23 +2,17 @@
   "name": "backend-api",
   "private": true,
   "type": "module",
-
   "_comment": "Fastify REST API server. Deployed to Railway via Dockerfile.api. Listens on $API_PORT (default 3001)",
-
   "scripts": {
     "_comment_dev": "Hot-reload dev server using tsx (TypeScript executor)",
     "dev": "tsx watch src/index.ts",
-
     "_comment_openapi": "Generates OpenAPI spec JSON for documentation",
     "openapi": "node dist/generate-openapi.js",
-
     "_comment_build": "Compile TS → dist/, then generate OpenAPI spec from compiled routes",
     "build": "tsc -p tsconfig.json && node dist/generate-openapi.js",
-
     "_comment_start": "Production entry point — Railway/Docker runs this after build",
     "start": "node dist/index.js"
   },
-
   "dependencies": {
     "@fastify/cors": "^10.0.2",
     "@fastify/jwt": "^9.0.3",
@@ -26,16 +20,15 @@
     "@fastify/swagger-ui": "^5.2.2",
     "@scee/db": "*",
     "@scee/shared": "*",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "bullmq": "^5.41.7",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
   }
 }
-
